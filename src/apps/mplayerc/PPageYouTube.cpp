@@ -23,6 +23,7 @@
 #include "PlayerYtDlp.h"
 #include "DSUtil/Filehandle.h"
 #include "DSUtil/HTTPAsync.h"
+#include "controls/DarkTheme.h"
 
 // CPPageYoutube dialog
 
@@ -184,6 +185,22 @@ BOOL CPPageYoutube::OnInitDialog()
 #endif
 
 	UpdateData(FALSE);
+
+	// The group box is defined after the video/audio controls in the dialog template, so it
+	// sits above them in the z-order. With the dark theme its owner-drawn fill would then paint
+	// over those controls (they stayed invisible until individually invalidated). Push it to
+	// the back AND give it WS_CLIPSIBLINGS so its fill is clipped out of the controls it frames
+	// (which are now in front of it) instead of painting over them.
+	if (DarkTheme::IsActive()) {
+		for (CWnd* pChild = GetWindow(GW_CHILD); pChild; pChild = pChild->GetWindow(GW_HWNDNEXT)) {
+			wchar_t cls[16] = {};
+			::GetClassNameW(pChild->GetSafeHwnd(), cls, _countof(cls));
+			if (_wcsicmp(cls, L"Button") == 0 && (pChild->GetStyle() & BS_TYPEMASK) == BS_GROUPBOX) {
+				pChild->ModifyStyle(0, WS_CLIPSIBLINGS);
+				pChild->SetWindowPos(&CWnd::wndBottom, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+			}
+		}
+	}
 
 	return TRUE;
 }
