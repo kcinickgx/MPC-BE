@@ -822,7 +822,9 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 		// Draw the bar frame / gripper / floating-frame border dark, like the playlist bar. Without
 		// this the Shader Editor, Capture, Navigation and Subresync bars render their sizing frame
 		// with light system colours (a bright "white frame", docked or floating).
-		pDockingBar->m_bUseDarkTheme = s.bUseDarkTheme;
+		// The playlist bar was dark before this work and stays keyed to the dark theme alone; the bars
+		// darkened here (Capture, Shader editor, Navigation, Subresync) follow the dialogs flag.
+		pDockingBar->m_bUseDarkTheme = (pDockingBar == &m_wndPlaylistBar) ? s.bUseDarkTheme : DarkTheme::IsActive();
 		pDockingBar->ShowWindow(SW_HIDE);
 	}
 

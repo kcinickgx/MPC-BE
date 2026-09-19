@@ -723,6 +723,7 @@ public:
 	bool			bDarkMenu;
 	bool			bDarkMenuBlurBehind;
 	bool			bDarkTitle;
+	bool			bDarkDialogs; // extend the dark theme to Options and the other dialogs (opt-in)
 	COLORREF		clrFaceABGR;
 	COLORREF		clrOutlineABGR;
 

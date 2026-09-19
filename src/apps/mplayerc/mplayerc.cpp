@@ -926,6 +926,7 @@ BOOL CMPlayerCApp::InitInstance()
 		// its default (dark) and the dialog would appear dark even when the user turned the dark
 		// theme off. Load the flag so the elevated Formats dialog matches the chosen theme.
 		AfxGetProfile().ReadBool(IDS_R_THEME, IDS_RS_USEDARKTHEME, m_s.bUseDarkTheme);
+		AfxGetProfile().ReadBool(IDS_R_THEME, IDS_RS_DARKDIALOGS, m_s.bDarkDialogs);
 
 		switch (m_s.iAdminOption) {
 			case CPPageFormats::IDD : {

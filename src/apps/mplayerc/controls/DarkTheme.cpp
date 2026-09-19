@@ -1640,7 +1640,11 @@ namespace DarkTheme
 	} // anonymous namespace
 
 	bool IsActive() {
-		return AfxGetAppSettings().bUseDarkTheme && SysVersion::IsWin10v1809orLater();
+		// Opt-in on top of the dark theme itself: the player's own dark chrome (toolbar, seek bar, menu,
+		// title, playlist) is unchanged by this flag, so anyone who has the dark theme on today sees
+		// nothing different until they also turn the dialogs on.
+		const CAppSettings& s = AfxGetAppSettings();
+		return s.bUseDarkTheme && s.bDarkDialogs && SysVersion::IsWin10v1809orLater();
 	}
 
 	// The background palette follows the R/G/B/Brightness sliders (ThemeRGB), so the Options

@@ -675,6 +675,7 @@ void CAppSettings::ResetSettings()
 	bDarkMenu = true;
 	bDarkMenuBlurBehind = false;
 	bDarkTitle = true;
+	bDarkDialogs = false;
 
 	ShowOSD.Enable = 1;
 	bOSDRemainingTime = false;
@@ -1301,6 +1302,7 @@ void CAppSettings::LoadSettings(bool bForce/* = false*/)
 	profile.ReadBool(IDS_R_THEME, IDS_RS_DARKMENU, bDarkMenu);
 	//profile.ReadBool(IDS_R_THEME, IDS_RS_DARKMENU_BLURBEHIND, bDarkMenuBlurBehind);
 	profile.ReadBool(IDS_R_THEME, IDS_RS_DARKTITLE, bDarkTitle);
+	profile.ReadBool(IDS_R_THEME, IDS_RS_DARKDIALOGS, bDarkDialogs);
 
 	// FullScreen
 	profile.ReadBool(IDS_R_SETTINGS, IDS_RS_LAUNCHFULLSCREEN, fLaunchfullscreen);
@@ -1926,6 +1928,7 @@ void CAppSettings::SaveSettings()
 	profile.WriteBool(IDS_R_THEME, IDS_RS_DARKMENU, bDarkMenu);
 	//profile.WriteBool(IDS_R_THEME, IDS_RS_DARKMENU_BLURBEHIND, bDarkMenuBlurBehind);
 	profile.WriteBool(IDS_R_THEME, IDS_RS_DARKTITLE, bDarkTitle);
+	profile.WriteBool(IDS_R_THEME, IDS_RS_DARKDIALOGS, bDarkDialogs);
 
 	// FullScreen
 	profile.WriteBool(IDS_R_SETTINGS, IDS_RS_LAUNCHFULLSCREEN, fLaunchfullscreen);

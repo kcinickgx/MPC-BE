@@ -50,6 +50,7 @@ void CPPageInterface::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_CHECK4, m_chkDarkMenu);
 	DDX_Control(pDX, IDC_CHECK7, m_chkDarkMenuBlurBehind);
 	DDX_Control(pDX, IDC_CHECK5, m_chkDarkTitle);
+	DDX_Control(pDX, IDC_CHECK_DARKDIALOGS, m_chkDarkDialogs);
 
 	DDX_Control(pDX, IDC_SLIDER1, m_ThemeBrightnessCtrl);
 	DDX_Control(pDX, IDC_SLIDER2, m_ThemeRedCtrl);
@@ -86,6 +87,7 @@ BOOL CPPageInterface::OnInitDialog()
 	m_chkDarkMenu.SetCheck(s.bDarkMenu);
 	//m_chkDarkMenuBlurBehind.SetCheck(s.bDarkMenuBlurBehind);
 	m_chkDarkTitle.SetCheck(s.bDarkTitle);
+	m_chkDarkDialogs.SetCheck(s.bDarkDialogs);
 
 	m_ThemeBrightnessCtrl.SetRange	(0, 100, TRUE);
 	m_ThemeRedCtrl.SetRange			(APP_THEMECHANNEL_MIN, APP_THEMECHANNEL_MAX, TRUE);
@@ -144,6 +146,7 @@ BOOL CPPageInterface::OnInitDialog()
 
 	if (!SysVersion::IsWin10v1809orLater()) {
 		m_chkDarkTitle.EnableWindow(FALSE);
+		m_chkDarkDialogs.EnableWindow(FALSE);
 	}
 
 //	if (!SysVersion::IsWin10orLater()) {
@@ -183,12 +186,13 @@ BOOL CPPageInterface::OnApply()
 	s.bDarkMenu = !!m_chkDarkMenu.GetCheck();
 	//s.bDarkMenuBlurBehind = !!m_chkDarkMenuBlurBehind.GetCheck();
 	s.bDarkTitle = !!m_chkDarkTitle.GetCheck();
+	const bool bDarkDialogs = s.bDarkDialogs;
+	s.bDarkDialogs = !!m_chkDarkDialogs.GetCheck();
 
-	// If the dark-theme toggle changed while the Options dialog is still open, re-theme the
-	// whole property sheet so it doesn't end up a mix of light and dark controls. (The theme
-	// colours no longer matter here — the Options palette is fixed — so only the toggle does.)
-	// GA_ROOT gives the sheet's top-level window (the pages live under it).
-	if (!!s.bUseDarkTheme != !!bUseDarkTheme) {
+	// If either toggle that decides the dialog theme changed while the Options dialog is still
+	// open, re-theme the whole property sheet so it doesn't end up a mix of light and dark
+	// controls. GA_ROOT gives the sheet's top-level window (the pages live under it).
+	if (!!s.bUseDarkTheme != !!bUseDarkTheme || s.bDarkDialogs != bDarkDialogs) {
 		TreePropSheet::CPropPageFrameDefault::s_bDarkMode = DarkTheme::IsActive();
 		TreePropSheet::CPropPageFrameDefault::s_clrFace   = DarkTheme::FaceColor();
 		TreePropSheet::CPropPageFrameDefault::s_clrText   = DarkTheme::TextColor();
@@ -239,7 +243,7 @@ BOOL CPPageInterface::OnApply()
 	// Update every docking bar's dark-frame flag (not just the playlist bar) so the Shader Editor,
 	// Capture, Navigation and Subresync bar frames follow the theme toggle too, then repaint them.
 	for (const auto& pDockingBar : pFrame->m_dockingbars) {
-		pDockingBar->m_bUseDarkTheme = s.bUseDarkTheme;
+		pDockingBar->m_bUseDarkTheme = (pDockingBar == &pFrame->m_wndPlaylistBar) ? s.bUseDarkTheme : DarkTheme::IsActive();
 		// The frame flag above doesn't reach the Subresync bar's list, which is themed once at
 		// creation (dark header / border / background via control subclasses that paint
 		// unconditionally). Re-apply or strip that so the list follows the toggle instead of staying
@@ -365,6 +369,7 @@ void CPPageInterface::OnUpdateCheck3(CCmdUI* pCmdUI)
 //	}
 	if (SysVersion::IsWin10v1809orLater()) {
 		m_chkDarkTitle.EnableWindow(bUseDarkTheme);
+		m_chkDarkDialogs.EnableWindow(bUseDarkTheme);
 	}
 }
 
