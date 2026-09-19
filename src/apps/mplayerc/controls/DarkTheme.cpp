@@ -1836,6 +1836,12 @@ namespace DarkTheme
 		EnableForWindow(hDlg);                 // dark title bar + allow dark mode
 		SetWindowSubclass(hDlg, DialogSubclassProc, kDialogSubclassId, 0); // dark bg / ctl colours
 		ApplyThemeToChildren(hDlg);            // theme the child controls
+		// Group boxes must sit BELOW the controls they frame: our group-box paint fills its whole
+		// rectangle, so a group box declared after its contents in the dialog template (as third-party
+		// filter pages such as XySubFilter's do) would paint right over them and they'd vanish -
+		// edits, spins and combos alike, until something happened to repaint them individually.
+		// CPPageBase pages do this in OnSetActive; everything themed through here needs it too.
+		FixGroupBoxes(hDlg);
 		// Repaint the dialog AND its child controls: InvalidateRect alone doesn't reach the
 		// child windows, so freshly-themed checkboxes/statics would keep their stale light paint.
 		// RDW_UPDATENOW forces a synchronous repaint so controls that otherwise only redraw on the
