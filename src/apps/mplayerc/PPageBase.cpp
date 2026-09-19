@@ -82,7 +82,6 @@ BEGIN_MESSAGE_MAP(CPPageBase, CCmdUIPropertyPage)
 	ON_WM_DESTROY()
 	ON_WM_CTLCOLOR()
 	ON_WM_ERASEBKGND()
-	ON_WM_DRAWITEM()
 END_MESSAGE_MAP()
 
 // CPPageBase message handlers
@@ -131,28 +130,6 @@ BOOL CPPageBase::OnEraseBkgnd(CDC* pDC)
 	}
 
 	return __super::OnEraseBkgnd(pDC);
-}
-
-// The horizontal separator lines in the option pages are owner-drawn statics
-// (SS_OWNERDRAW) so Windows does not paint its light 3D etched line. We draw them
-// here: a flat line in the shared border colour when the dark theme is active, or
-// the classic etched edge otherwise.
-void CPPageBase::OnDrawItem(int nIDCtl, LPDRAWITEMSTRUCT lpDrawItemStruct)
-{
-	if (lpDrawItemStruct && lpDrawItemStruct->CtlType == ODT_STATIC) {
-		CDC* pDC = CDC::FromHandle(lpDrawItemStruct->hDC);
-		CRect rc(lpDrawItemStruct->rcItem);
-		if (DarkTheme::IsActive()) {
-			pDC->FillSolidRect(rc, DarkTheme::FaceColor());
-			pDC->FillSolidRect(rc.left, rc.top + rc.Height() / 2, rc.Width(), 1, DarkTheme::CtrlBorderColor());
-		} else {
-			pDC->FillSolidRect(rc, GetSysColor(COLOR_3DFACE));
-			::DrawEdge(lpDrawItemStruct->hDC, &rc, EDGE_ETCHED, BF_TOP);
-		}
-		return;
-	}
-
-	__super::OnDrawItem(nIDCtl, lpDrawItemStruct);
 }
 
 BOOL CPPageBase::OnNotify(WPARAM wParam, LPARAM lParam, LRESULT* pResult)

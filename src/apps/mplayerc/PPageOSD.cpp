@@ -341,8 +341,10 @@ void CPPageOSD::OnCustomDrawBtns(NMHDR* pNMHDR, LRESULT* pResult)
 			CPen penFrEnabled(PS_SOLID, 0, bDark ? DarkTheme::CtrlBorderColor() : GetSysColor(COLOR_BTNTEXT));
 			CPen penFrDisabled(PS_SOLID, 0, bDark ? DarkTheme::CtrlBorderColor() : GetSysColor(COLOR_BTNSHADOW));
 			CPen* penOld = dc.SelectObject(&penFrEnabled);
-			CBrush brBack(bDark ? DarkTheme::FaceColor() : GetSysColor(COLOR_3DFACE));
-			CBrush* pOldBrush = dc.SelectObject(&brBack);
+			// Dark only: fill the rounded swatch's surround with the page colour so no light ring shows.
+			// Light keeps the DC's default brush, exactly as upstream draws it.
+			CBrush brBack(DarkTheme::FaceColor());
+			CBrush* pOldBrush = bDark ? dc.SelectObject(&brBack) : nullptr;
 			if (bDark) {
 				dc.FillSolidRect(&r, DarkTheme::FaceColor()); // avoid a light ring around the rounded swatch
 			}
@@ -366,7 +368,9 @@ void CPPageOSD::OnCustomDrawBtns(NMHDR* pNMHDR, LRESULT* pResult)
 			}
 
 			dc.SelectObject(&penOld);
-			dc.SelectObject(pOldBrush);
+			if (pOldBrush) {
+				dc.SelectObject(pOldBrush);
+			}
 			dc.Detach();
 
 			*pResult = CDRF_SKIPDEFAULT;

@@ -828,9 +828,10 @@ void CPPageFormats::BuildCheckImageList()
 
 	if (DarkTheme::IsActive()) {
 		MakeDarkCheckImageList(m_onoff, chkH, m_list.GetSafeHwnd());
-	} else if (!MakeThemedCheckImageList(m_onoff, chkH, m_list.GetSafeHwnd(), false)) {
-		// Native (themed) light checkboxes matching the other checklists; fall back to upstream's
-		// SVG glyphs only if the visual style is unavailable.
+	} else {
+		// Light theme: the SVG glyphs exactly as upstream draws them. (They were briefly replaced by
+		// the visual-style check box to match the other check lists, but the light look is not this
+		// change's to alter.)
 		CSvgImage svgImage;
 		if (svgImage.Load(IDF_SVG_ONOFF)) {
 			int w = 0;

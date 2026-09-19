@@ -235,7 +235,9 @@ void CFavoriteOrganizeDlg::OnDrawItem(int nIDCtl, LPDRAWITEMSTRUCT lpDrawItemStr
 	}
 
 	CStringW str;
-	pDC->SetBkMode(TRANSPARENT); // don't paint a light box behind the text over the dark row
+	if (dark) {
+		pDC->SetBkMode(TRANSPARENT); // don't paint a light box behind the text over the dark row
+	}
 	pDC->SetTextColor(dark ? DarkTheme::TextColor() : 0);
 
 	str = m_list.GetItemText(nItem, 0);
