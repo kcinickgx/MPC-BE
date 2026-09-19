@@ -1345,6 +1345,48 @@ namespace DarkTheme
 		// Disabled text statics are drawn by Windows with an embossed grey (a light 1px shadow),
 		// which looks bad on a dark background. Owner-draw disabled text labels flat instead — a
 		// plain grey caption, no emboss. Enabled statics fall through to the default painting.
+		// The resize grip in the corner of a resizable dialog (ResizableLib) is a real scroll bar with
+		// SBS_SIZEGRIP. It paints the classic grip on an opaque box in the system face colour, which
+		// disappears into a light dialog and shows as a light square in the corner of a dark one. Own its
+		// paint: dark background and the same three dotted diagonals, so the affordance stays visible.
+		const UINT_PTR kGripSubclassId = 15;
+
+		LRESULT CALLBACK GripSubclassProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR /*uId*/, DWORD_PTR /*dw*/) {
+			switch (msg) {
+				case WM_ERASEBKGND:
+					return 1;
+				case WM_PAINT: {
+					PAINTSTRUCT ps;
+					HDC hdc = ::BeginPaint(hWnd, &ps);
+					RECT rc;
+					::GetClientRect(hWnd, &rc);
+					HBRUSH bg = ::CreateSolidBrush(FaceColor());
+					::FillRect(hdc, &rc, bg);
+					::DeleteObject(bg);
+					// Dots on the bottom-right diagonal, like the classic grip: rows of 1, 2 and 3.
+					const UINT dpi = ::GetDpiForWindow(hWnd);
+					const int step = ::MulDiv(4, dpi ? dpi : 96, 96);
+					const int dot  = ::MulDiv(2, dpi ? dpi : 96, 96);
+					HBRUSH dotBrush = ::CreateSolidBrush(Shade(FaceColor(), 55));
+					for (int row = 1; row <= 3; ++row) {
+						for (int col = 1; col <= row; ++col) {
+							RECT d = { rc.right - col * step, rc.bottom - (row - col + 1) * step, 0, 0 };
+							d.right = d.left + dot;
+							d.bottom = d.top + dot;
+							::FillRect(hdc, &d, dotBrush);
+						}
+					}
+					::DeleteObject(dotBrush);
+					::EndPaint(hWnd, &ps);
+					return 0;
+				}
+				case WM_NCDESTROY:
+					RemoveWindowSubclass(hWnd, GripSubclassProc, kGripSubclassId);
+					break;
+			}
+			return DefSubclassProc(hWnd, msg, wParam, lParam);
+		}
+
 		const UINT_PTR kStaticSubclassId = 10;
 
 		LRESULT CALLBACK StaticSubclassProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR /*uId*/, DWORD_PTR /*dw*/) {
@@ -1582,8 +1624,15 @@ namespace DarkTheme
 				// Note: SysTabControl32 is handled by CDarkTabCtrl (a CTabCtrl-derived
 				// owner-drawn control), not here — installing a comctl subclass would sit
 				// in front of MFC's WndProc and steal WM_PAINT from that class.
-				// up-down, scrollbar, ...
-				SetWindowTheme(hCtrl, L"DarkMode_Explorer", nullptr);
+				// The resize grip of a resizable dialog: a scroll bar with SBS_SIZEGRIP that paints an opaque
+				// light box. Owner-draw it dark instead of theming it (see GripSubclassProc).
+				if (_wcsicmp(cls, L"ScrollBar") == 0 && (GetWindowLongW(hCtrl, GWL_STYLE) & (SBS_SIZEGRIP | SBS_SIZEBOX))) {
+					SetWindowSubclass(hCtrl, GripSubclassProc, kGripSubclassId, 0);
+					InvalidateRect(hCtrl, nullptr, TRUE);
+				} else {
+					// up-down, scrollbar, ...
+					SetWindowTheme(hCtrl, L"DarkMode_Explorer", nullptr);
+				}
 			}
 		}
 
@@ -1603,6 +1652,7 @@ namespace DarkTheme
 			RemoveWindowSubclass(hChild, ComboBorderSubclassProc, kComboBorderSubclassId);
 			RemoveWindowSubclass(hChild, TrackbarSubclassProc, kTrackbarSubclassId);
 			RemoveWindowSubclass(hChild, StaticSubclassProc,   kStaticSubclassId);
+			RemoveWindowSubclass(hChild, GripSubclassProc,     kGripSubclassId);
 			// Un-hide a separator we hid while dark (see the SS_ETCHED* branch in ThemeControl) so it draws
 			// its own native etched line again, which is the correct look in the light theme.
 			if (::GetPropW(hChild, L"MPC_ETCHED_ORIG")) {
