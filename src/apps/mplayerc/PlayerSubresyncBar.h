@@ -130,6 +130,7 @@ public:
 	// The list is themed once in Create; without this it stays dark (dark header/border/background,
 	// light rows) after the theme is toggled off. Called from the Interface page's toggle handler.
 	void RefreshListDarkTheme();
+	void RefreshDarkTheme() override { __super::RefreshDarkTheme(); RefreshListDarkTheme(); }
 
 
 protected:

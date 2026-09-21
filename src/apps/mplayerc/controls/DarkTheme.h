@@ -113,6 +113,16 @@ namespace DarkTheme
 	// inactive — and forces a full redraw. Pass the Options property sheet HWND.
 	void RefreshTheme(HWND hRoot);
 
+	// Same idea for a dialog that lives for the whole session inside a docking bar (Shader editor,
+	// Capture) and was created while the dialogs option was OFF: ThemeDialog did nothing then, so
+	// turning the option on later has to theme it now - and turning it off has to strip it, subclass
+	// and all, since it is never recreated. Idempotent: does nothing when the dialog already matches.
+	void RefreshDialog(HWND hDlg);
+
+	// Undoes EnableForWindow on a top-level window that outlives the toggle (the floating bar
+	// mini-frame): light title bar, caption colour handed back to the system, dark mode off.
+	void DisableForWindow(HWND hWnd);
+
 	// Re-tints the themed backgrounds live as the R/G/B/Brightness sliders move, so the Options
 	// dialog tracks the player colour in real time (the text colour stays fixed). Pass the sheet.
 	void RefreshColors(HWND hRoot);

@@ -2023,24 +2023,59 @@ namespace DarkTheme
 			// undo the process-wide force-dark so the main window's menus revert to light (they use
 			// the immersive dark menu theme, which otherwise stays dark until the app restarts).
 			DisallowDarkModeForApp();
-			if (g_bApiOk && pAllowDarkModeForWindow) {
-				pAllowDarkModeForWindow(hRoot, false);
-			}
-			BOOL bDark = FALSE;                 // restore the light title bar
-			if (FAILED(DwmSetWindowAttribute(hRoot, 20, &bDark, sizeof(bDark)))) {
-				DwmSetWindowAttribute(hRoot, 19, &bDark, sizeof(bDark));
-			}
-			// EnableForWindow also pins an explicit caption colour on Win11, and that outranks the
-			// light/dark preference above - so clearing only the dark-mode attribute left the title bar
-			// dark until the dialog was closed and reopened (a fresh window has no override). Hand the
-			// caption back to the system.
-			if (SysVersion::IsWin11orLater()) {
-				COLORREF cap = 0xFFFFFFFF; // DWMWA_COLOR_DEFAULT
-				DwmSetWindowAttribute(hRoot, 35 /*DWMWA_CAPTION_COLOR*/, &cap, sizeof(cap));
-			}
+			DisableForWindow(hRoot);
 			EnumChildWindows(hRoot, StripThemeChildProc, 0);
 		}
 		::RedrawWindow(hRoot, nullptr, nullptr,
+			RDW_INVALIDATE | RDW_ERASE | RDW_FRAME | RDW_ALLCHILDREN | RDW_UPDATENOW);
+	}
+
+	void DisableForWindow(HWND hWnd) {
+		if (!hWnd) {
+			return;
+		}
+		LoadApi();
+		if (g_bApiOk && pAllowDarkModeForWindow) {
+			pAllowDarkModeForWindow(hWnd, false);
+		}
+		BOOL bDark = FALSE;                 // restore the light title bar
+		if (FAILED(DwmSetWindowAttribute(hWnd, 20, &bDark, sizeof(bDark)))) {
+			DwmSetWindowAttribute(hWnd, 19, &bDark, sizeof(bDark));
+		}
+		// EnableForWindow also pins an explicit caption colour on Win11, and that outranks the
+		// light/dark preference above - so clearing only the dark-mode attribute left the title bar
+		// dark until the window was closed and reopened (a fresh window has no override). Hand the
+		// caption back to the system.
+		if (SysVersion::IsWin11orLater()) {
+			COLORREF cap = 0xFFFFFFFF; // DWMWA_COLOR_DEFAULT
+			DwmSetWindowAttribute(hWnd, 35 /*DWMWA_CAPTION_COLOR*/, &cap, sizeof(cap));
+		}
+	}
+
+	void RefreshDialog(HWND hDlg) {
+		if (!hDlg) {
+			return;
+		}
+		const bool bThemed = !!GetWindowSubclass(hDlg, DialogSubclassProc, kDialogSubclassId, nullptr);
+		if (IsActive()) {
+			if (!bThemed) {
+				ThemeDialog(hDlg);
+			}
+			return;
+		}
+		if (!bThemed) {
+			return;
+		}
+		// Turned off: the dialog keeps living, so undo ThemeDialog completely - the dialog's own
+		// background/colour subclass (it paints dark unconditionally), every child override, and the
+		// per-window dark-mode flag - then repaint frame and children.
+		LoadApi();
+		RemoveWindowSubclass(hDlg, DialogSubclassProc, kDialogSubclassId);
+		EnumChildWindows(hDlg, StripThemeChildProc, 0);
+		if (g_bApiOk && pAllowDarkModeForWindow) {
+			pAllowDarkModeForWindow(hDlg, false);
+		}
+		::RedrawWindow(hDlg, nullptr, nullptr,
 			RDW_INVALIDATE | RDW_ERASE | RDW_FRAME | RDW_ALLCHILDREN | RDW_UPDATENOW);
 	}
 
