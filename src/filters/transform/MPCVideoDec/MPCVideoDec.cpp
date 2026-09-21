@@ -58,7 +58,9 @@ extern "C" {
 	#include <ExtLib/ffmpeg/libavutil/mastering_display_metadata.h>
 	#include <ExtLib/ffmpeg/libavutil/dovi_meta.h>
 	#include <ExtLib/ffmpeg/libavutil/opt.h>
-	#include <ExtLib/ffmpeg/libavutil/hwcontext_cuda_internal.h>
+	namespace cuda {
+		#include <ExtLib/ffmpeg/libavutil/hwcontext_cuda_internal.h>
+	}
 	#include <ExtLib/ffmpeg/libavutil/hwcontext_d3d11va.h>
 	#include <ExtLib/ffmpeg/libavutil/hwcontext_d3d12va.h>
 }
@@ -3880,11 +3882,11 @@ HRESULT CMPCVideoDecFilter::DecodeInternal(AVPacket *avpkt, REFERENCE_TIME rtSta
 			}
 			else if (frames_ctx->format == AV_PIX_FMT_CUDA && m_FormatConverter.DirectCopyPossible(frames_ctx->sw_format)) {
 				auto device_hwctx = reinterpret_cast<AVHWDeviceContext*>(frames_ctx->device_ctx);
-				auto cuda_hwctx = reinterpret_cast<AVCUDADeviceContext*>(device_hwctx->hwctx);
+				auto cuda_hwctx = reinterpret_cast<cuda::AVCUDADeviceContext*>(device_hwctx->hwctx);
 				auto cuda_fns = cuda_hwctx->internal->cuda_dl;
 
 				auto cuStatus = cuda_fns->cuCtxPushCurrent(cuda_hwctx->cuda_ctx);
-				if (cuStatus != CUDA_SUCCESS) {
+				if (cuStatus != cuda::CUDA_SUCCESS) {
 					DLog(L"CMPCVideoDecFilter::DecodeInternal() : Cuda cuCtxPushCurrent() failed");
 					av_frame_unref(frame);
 					continue;
@@ -3903,28 +3905,28 @@ HRESULT CMPCVideoDecFilter::DecodeInternal(AVPacket *avpkt, REFERENCE_TIME rtSta
 
 				unsigned offset = 0;
 				for (size_t i = 0; i < std::size(hwdata) && hwdata[i]; i++) {
-					CUDA_MEMCPY2D cpy = {};
+					cuda::CUDA_MEMCPY2D cpy = {};
 
 					cpy.srcPitch      = m_pHWFrame->linesize[i];
 					cpy.dstPitch      = linesize[i];
 					cpy.WidthInBytes  = std::min(cpy.srcPitch, cpy.dstPitch);
 					cpy.Height        = m_pHWFrame->height >> ((i == 0 || i == 3) ? 0 : v_shift);
 
-					cpy.srcMemoryType = CU_MEMORYTYPE_DEVICE;
-					cpy.srcDevice     = reinterpret_cast<CUdeviceptr>(hwdata[i]);
+					cpy.srcMemoryType = cuda::CU_MEMORYTYPE_DEVICE;
+					cpy.srcDevice     = reinterpret_cast<cuda::CUdeviceptr>(hwdata[i]);
 
-					cpy.dstMemoryType = CU_MEMORYTYPE_HOST;
+					cpy.dstMemoryType = cuda::CU_MEMORYTYPE_HOST;
 					cpy.dstHost       = pDataOut + offset;
 
 					cuStatus = cuda_fns->cuMemcpy2DAsync(&cpy, cuda_hwctx->stream);
-					if (cuStatus != CUDA_SUCCESS) {
+					if (cuStatus != cuda::CUDA_SUCCESS) {
 						break;
 					}
 
 					offset += linesize[i] * (m_pHWFrame->height >> (i ? v_shift : 0));
 				}
 
-				if (cuStatus != CUDA_SUCCESS) {
+				if (cuStatus != cuda::CUDA_SUCCESS) {
 					DLog(L"CMPCVideoDecFilter::DecodeInternal() : Cuda cuMemcpy2DAsync() failed");
 					av_frame_unref(frame);
 					continue;
@@ -4155,35 +4157,38 @@ void CMPCVideoDecFilter::SetDXVAState()
 {
 	CString codec;
 	switch (m_CodecId) {
-	case AV_CODEC_ID_AV1:        codec = L"AV1";    break;
-	case AV_CODEC_ID_H264:       codec = L"H.264";  break;
-	case AV_CODEC_ID_HEVC:       codec = L"HEVC";   break;
 	case AV_CODEC_ID_MPEG2VIDEO: codec = L"MPEG-2"; break;
+	case AV_CODEC_ID_H264:       codec = L"H.264";  break;
 	case AV_CODEC_ID_VC1:
 	case AV_CODEC_ID_WMV3:       codec = L"VC-1";   break;
 	case AV_CODEC_ID_VP9:        codec = L"VP9";    break;
+	case AV_CODEC_ID_HEVC:       codec = L"HEVC";   break;
+	case AV_CODEC_ID_AV1:        codec = L"AV1";    break;
 	}
 
 	auto frames_ctx = reinterpret_cast<AVHWFramesContext*>(m_pHWFrame->hw_frames_ctx->data);
 
-	CString description = m_hwType == HwType::D3D11CopyBack ? L"D3D11 Copy-back" :
-		(m_hwType == HwType::D3D12CopyBack ? L"D3D12 Copy-back" : L"NVDEC");
+	CString description =
+		(m_hwType == HwType::D3D11CopyBack) ? L"D3D11 Copy-back" :
+		(m_hwType == HwType::D3D12CopyBack) ? L"D3D12 Copy-back" :
+		L"NVDEC";
+
 	if (!codec.IsEmpty()) {
-		if (m_hwType == HwType::NVDEC) {
-			if (frames_ctx->sw_format == AV_PIX_FMT_YUV444P || frames_ctx->sw_format == AV_PIX_FMT_YUV444P16) {
-				codec.Append(L" 444");
-			}
-		}
-		else if (m_hwType == HwType::D3D11CopyBack) {
+		if (m_hwType != HwType::None) {
 			switch (frames_ctx->sw_format) {
 			case AV_PIX_FMT_YUYV422:
-			case AV_PIX_FMT_Y210:
-			case AV_PIX_FMT_Y212:
+			case AV_PIX_FMT_NV16:
+			case AV_PIX_FMT_Y210LE:
+			case AV_PIX_FMT_Y212LE:
 				codec.Append(L" 422");
 				break;
+			case AV_PIX_FMT_YUV444P:
+			case AV_PIX_FMT_YUV444P16LE:
 			case AV_PIX_FMT_VUYX:
-			case AV_PIX_FMT_XV30:
-			case AV_PIX_FMT_XV36:
+			case AV_PIX_FMT_XV30LE:
+			case AV_PIX_FMT_XV36LE:
+			case AV_PIX_FMT_YUV444P10MSBLE:
+			case AV_PIX_FMT_YUV444P12MSBLE:
 				codec.Append(L" 444");
 				break;
 			}
@@ -4201,12 +4206,12 @@ void CMPCVideoDecFilter::SetDXVAState()
 
 	if (frames_ctx->format == AV_PIX_FMT_CUDA) {
 		auto device_hwctx = reinterpret_cast<AVHWDeviceContext*>(frames_ctx->device_ctx);
-		auto cuda_hwctx = reinterpret_cast<AVCUDADeviceContext*>(device_hwctx->hwctx);
+		auto cuda_hwctx = reinterpret_cast<cuda::AVCUDADeviceContext*>(device_hwctx->hwctx);
 		auto cuda_fns = cuda_hwctx->internal->cuda_dl;
 
 		char name[256] = {};
 		auto cuStatus = cuda_fns->cuDeviceGetName(name, 256, cuda_hwctx->internal->cuda_device);
-		if (cuStatus == CUDA_SUCCESS) {
+		if (cuStatus == cuda::CUDA_SUCCESS) {
 			const auto deviceName = UTF8ToWStr(name);
 			if (!StartsWith(m_strDeviceDescription, deviceName.GetString())) {
 				m_strDeviceDescription = deviceName;

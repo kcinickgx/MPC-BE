@@ -1,5 +1,5 @@
 /*
- * (C) 2006-2024 see Authors.txt
+ * (C) 2006-2026 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -42,7 +42,8 @@ public:
 	virtual void			CleanOld(REFERENCE_TIME rt) PURE;
 	virtual HRESULT			EndOfStream() { return S_OK; }
 
-	HRESULT					SetConvertType(LPCWSTR _yuvMatrix, ColorConvert::convertType _convertType);
+	HRESULT					SetConvertType(LPCWSTR _yuvMatrix, ColorConvert::ConvertType _convertType);
+	ColorConvert::ColorSpace ResolveColorSpace(SHORT width) const;
 
 	void					SetForced(bool bForced) { m_bForced = bForced; }
 
@@ -57,15 +58,9 @@ protected :
 	void					InitSpd(SubPicDesc& spd, int nWidth, int nHeight);
 	void					FinalizeRender(SubPicDesc& spd);
 
-	enum class YUVMATRIX
-	{
-		UNKNOWN,
-		BT601,
-		BT709
-	};
-
-	YUVMATRIX					yuvMatrix = {};
-	ColorConvert::convertType	convertType;
+	ColorConvert::ColorSpace	colorSpace = {};
+	ColorConvert::ConvertType	convertType = {};
+	ColorConvert::Converter		m_conv;
 
 	bool m_bForced = false;
 };

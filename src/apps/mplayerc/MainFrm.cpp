@@ -16728,7 +16728,7 @@ void CMainFrame::SetSubtitle(ISubStream* pSubStream, int iSubtitleSel/* = -1*/, 
 				int nPos = 0;
 				inputRange = yuvMatrix.Tokenize(L".", nPos);
 				yuvMatrix = yuvMatrix.Mid(nPos);
-				if (yuvMatrix != L"601") {
+				if (yuvMatrix != L"2020" && yuvMatrix != L"601") {
 					yuvMatrix = L"709";
 				}
 			} else {
@@ -17080,7 +17080,7 @@ void CMainFrame::SeekTo(REFERENCE_TIME rtPos, bool bShowOSD/* = true*/)
 		CAppSettings& s = AfxGetAppSettings();
 		const bool bShowMilliSecs = s.bShowMilliSecs || m_wndSubresyncBar.IsWindowVisible();
 		m_wndStatusBar.SetStatusTimer(rtPos, stop, bShowMilliSecs, GetTimeFormat());
-		if (bShowOSD && stop > 0 && s.ShowOSD.SeekTime) {
+		if (bShowOSD && stop > 0 && s.ShowOSD.SeekTime && !s.bOSDRemainingTime) {
 			m_OSD.DisplayMessage(OSD_TOPLEFT, m_wndStatusBar.GetStatusTimer(), 1500);
 		}
 	}
@@ -18428,6 +18428,8 @@ afx_msg void CMainFrame::OnLanguage(UINT nID)
 	if (s.bUseDarkTheme && s.bDarkMenu) {
 		SetColorMenu();
 	}
+
+	m_wndStatusBar.SetMenu();
 
 	// Re-create Win 7 TaskBar preview button for change button hint
 	CreateThumbnailToolbar();

@@ -1,5 +1,5 @@
 /*
- * (C) 2006-2024 see Authors.txt
+ * (C) 2006-2026 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -24,7 +24,6 @@
 CBaseSub::CBaseSub(SUBTITLE_TYPE nType)
 	: m_nType(nType)
 	, m_bResizedRender(FALSE)
-	, convertType(ColorConvert::convertType::DEFAULT)
 {
 }
 
@@ -72,16 +71,33 @@ void CBaseSub::FinalizeRender(SubPicDesc& spd)
 	}
 }
 
-HRESULT CBaseSub::SetConvertType(LPCWSTR _yuvMatrix, ColorConvert::convertType _convertType)
+HRESULT CBaseSub::SetConvertType(LPCWSTR _yuvMatrix, ColorConvert::ConvertType _convertType)
 {
-	if (wcscmp(_yuvMatrix, L"709") == 0) {
-		yuvMatrix = YUVMATRIX::BT709;
+	if (wcscmp(_yuvMatrix, L"2020") == 0) {
+		colorSpace = ColorConvert::ColorSpace::BT2020;
+	} else if (wcscmp(_yuvMatrix, L"709") == 0) {
+		colorSpace = ColorConvert::ColorSpace::REC709;
 	}
 	else if (wcscmp(_yuvMatrix, L"601") == 0) {
-		yuvMatrix = YUVMATRIX::BT601;
+		colorSpace = ColorConvert::ColorSpace::REC601;
 	}
 
 	convertType = _convertType;
+	m_conv.Set(colorSpace, convertType);
 
 	return S_OK;
+}
+
+ColorConvert::ColorSpace CBaseSub::ResolveColorSpace(SHORT width) const
+{
+	if (colorSpace != ColorConvert::ColorSpace::Unknown) {
+		return colorSpace;
+	}
+
+	return width > 1920
+		? ColorConvert::ColorSpace::BT2020
+		: (width > 720
+			? ColorConvert::ColorSpace::REC709
+			: ColorConvert::ColorSpace::REC601
+		);
 }

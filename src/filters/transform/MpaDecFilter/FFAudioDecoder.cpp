@@ -466,11 +466,22 @@ bool CFFAudioDecoder::Init(enum AVCodecID codecID, CMediaType* mediaType)
 		m_pPacket->pts = 0;
 	}
 	else if (m_pAVCtx->ch_layout.nb_channels > 8 && m_pAVCtx->ch_layout.order == AV_CHANNEL_ORDER_NATIVE && (m_pAVCtx->ch_layout.u.mask & 0xffffffff00000000)) {
-		m_bNeedMix = true;
-		m_MixerChannels = 8;
+		DLog(L"CFFAudioDecoder::Init : Enable conversion of more than 8-channel audio with unsupported channel layouts to 7.1");
+		m_bNeedMix           = true;
+		m_MixerSamplerate    = m_pAVCtx->sample_rate;
+		m_MixerChannels      = 8;
 		m_MixerChannelLayout = GetDefChannelMask(8);
 		m_Mixer.UpdateInput((SampleFormat)m_pAVCtx->sample_fmt, m_pAVCtx->ch_layout.u.mask, m_pAVCtx->sample_rate);
-		m_Mixer.UpdateOutput(SAMPLE_FMT_FLT, m_MixerChannelLayout, m_pAVCtx->sample_rate);
+		m_Mixer.UpdateOutput(SAMPLE_FMT_FLT, m_MixerChannelLayout, m_MixerSamplerate);
+	}
+	else if (m_pAVCtx->sample_fmt == AV_SAMPLE_FMT_DSD) {
+		DLog(L"CFFAudioDecoder::Init : Enable DSD to PCM Float conversion");
+		m_bNeedMix           = true;
+		m_MixerSamplerate    = 96000;
+		m_MixerChannels      = ch_layout.nb_channels;
+		m_MixerChannelLayout = ch_layout.u.mask;
+		m_Mixer.UpdateInput(SAMPLE_FMT_DSD, m_pAVCtx->ch_layout.u.mask, m_pAVCtx->sample_rate);
+		m_Mixer.UpdateOutput(SAMPLE_FMT_FLT, m_MixerChannelLayout, m_MixerSamplerate);
 	}
 
 	m_bNeedSyncpoint = (m_raData.deint_id != 0);
@@ -578,39 +589,40 @@ HRESULT CFFAudioDecoder::ReceiveData(std::vector<BYTE>& BuffOut, size_t& outputS
 
 		const size_t nSamples = m_pFrame->nb_samples;
 		if (nSamples) {
-			const WORD nChannels = m_pAVCtx->ch_layout.nb_channels;
-			samplefmt = (SampleFormat)m_pAVCtx->sample_fmt;
-			const size_t monosize = nSamples * av_get_bytes_per_sample(m_pAVCtx->sample_fmt);
-
-			static std::vector<BYTE> mixBuffer;
-			auto& bufferOutput = m_bNeedMix ? mixBuffer : BuffOut;
-
-			outputSize = monosize * nChannels;
-			if (outputSize > bufferOutput.size()) {
-				bufferOutput.resize(outputSize);
-			}
-
-			if (av_sample_fmt_is_planar(m_pAVCtx->sample_fmt)) {
-				BYTE* pOut = bufferOutput.data();
-				for (int ch = 0; ch < nChannels; ++ch) {
-					memcpy(pOut, m_pFrame->extended_data[ch], monosize);
-					pOut += monosize;
-				}
-			} else {
-				memcpy(bufferOutput.data(), m_pFrame->data[0], outputSize);
-			}
-
 			if (m_bNeedMix) {
 				samplefmt = SAMPLE_FMT_FLT;
+
 				auto out_samples = m_Mixer.CalcOutSamples(nSamples);
 				outputSize = static_cast<size_t>(out_samples) * m_MixerChannels * sizeof(float);
 				if (outputSize > BuffOut.size()) {
 					BuffOut.resize(outputSize);
 				}
-				out_samples = m_Mixer.Mixing(BuffOut.data(), out_samples, mixBuffer.data(), nSamples);
+				out_samples = m_Mixer.Mixing2(BuffOut.data(), out_samples, (const BYTE**)m_pFrame->extended_data, nSamples);
+				outputSize = static_cast<size_t>(out_samples) * m_MixerChannels * sizeof(float);
 				if (!out_samples) {
 					av_frame_unref(m_pFrame);
 					return E_INVALIDARG;
+				}
+			}
+			else {
+				samplefmt = (SampleFormat)m_pAVCtx->sample_fmt;
+
+				const WORD nChannels = m_pAVCtx->ch_layout.nb_channels;
+				const size_t monosize = nSamples * av_get_bytes_per_sample(m_pAVCtx->sample_fmt);
+
+				outputSize = monosize * nChannels;
+				if (outputSize > BuffOut.size()) {
+					BuffOut.resize(outputSize);
+				}
+
+				if (av_sample_fmt_is_planar(m_pAVCtx->sample_fmt)) {
+					BYTE* pOut = BuffOut.data();
+					for (int ch = 0; ch < nChannels; ++ch) {
+						memcpy(pOut, m_pFrame->extended_data[ch], monosize);
+						pOut += monosize;
+					}
+				} else {
+					memcpy(BuffOut.data(), m_pFrame->data[0], outputSize);
 				}
 			}
 		}
@@ -812,12 +824,12 @@ const char* CFFAudioDecoder::GetCodecName()
 
 SampleFormat CFFAudioDecoder::GetSampleFmt()
 {
-	return (SampleFormat)m_pAVCtx->sample_fmt;
+	return m_bNeedMix ? SAMPLE_FMT_FLT : (SampleFormat)m_pAVCtx->sample_fmt;
 }
 
 DWORD CFFAudioDecoder::GetSampleRate()
 {
-	return (DWORD)m_pAVCtx->sample_rate;
+	return m_bNeedMix ? (DWORD)m_MixerSamplerate : (DWORD)m_pAVCtx->sample_rate;
 }
 
 WORD CFFAudioDecoder::GetChannels()
