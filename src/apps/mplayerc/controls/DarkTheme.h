@@ -164,4 +164,5 @@ namespace DarkTheme
 	COLORREF CtrlBackColor();   // sunken control interior (edit / listbox)
 	COLORREF CtrlBorderColor(); // shared 1px border for every control (edits, spins, color wells, group boxes, tabs)
 	COLORREF GridlineColor();   // list-view grid lines (darker than the control borders)
+	COLORREF ButtonFaceColor(bool bDisabled, bool bPressed, bool bHot); // push-button face, per state
 }

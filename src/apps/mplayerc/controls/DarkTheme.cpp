@@ -276,10 +276,7 @@ namespace DarkTheme
 
 					pDC->FillSolidRect(rc, FaceColor()); // dialog bg behind the rounded corners
 
-					const COLORREF face = disabled ? Shade(FaceColor(), 16)
-										: pressed  ? Shade(FaceColor(), 14)
-										: hot      ? Shade(FaceColor(), 40)
-												   : Shade(FaceColor(), 28);
+					const COLORREF face = ButtonFaceColor(disabled, pressed, hot);
 					const COLORREF border = disabled ? Shade(FaceColor(), 38)
 										  : isDef    ? RGB(76, 194, 255)
 													 : Shade(FaceColor(), 62);
@@ -1697,11 +1694,27 @@ namespace DarkTheme
 		return s.bUseDarkTheme && s.bDarkDialogs && SysVersion::IsWin10v1809orLater();
 	}
 
+	namespace {
+		// ThemeRGB with the colour channels floored at 50 - for the DIALOGS only. Every themed colour is
+		// the channel value multiplied in, so at R/G/B = 0 the dialog background is pure black and the
+		// fixed-offset palette below has nothing to offset from: text boxes, buttons and group boxes all
+		// end up the same black. The player's own chrome keeps the full 0..255 range of the sliders
+		// (that is upstream behaviour and not ours to limit); only what this file paints is floored.
+		COLORREF DialogThemeRGB(int iR, int iG, int iB) {
+			const CAppSettings& s = AfxGetAppSettings();
+			constexpr int kFloor = 50;
+			const int r = (s.nThemeBrightness + iR) * std::max(s.nThemeRed,   kFloor) / 256;
+			const int g = (s.nThemeBrightness + iG) * std::max(s.nThemeGreen, kFloor) / 256;
+			const int b = (s.nThemeBrightness + iB) * std::max(s.nThemeBlue,  kFloor) / 256;
+			return RGB(std::clamp(r, 0, 255), std::clamp(g, 0, 255), std::clamp(b, 0, 255));
+		}
+	}
+
 	// The background palette follows the R/G/B/Brightness sliders (ThemeRGB), so the Options
 	// dialog tints in real time to match the player. The TEXT colour is deliberately FIXED (not
 	// run through ThemeRGB) so it stays readable wherever the sliders are, instead of being
 	// driven to black when a channel is lowered.
-	COLORREF FaceColor()       { return ThemeRGB(22, 27, 32); }
+	COLORREF FaceColor()       { return DialogThemeRGB(22, 27, 32); }
 	COLORREF TextColor()       { return RGB(165, 170, 175); }
 	// Sunken interiors (edits, list boxes, the combo field, the slider groove) sit a little darker than
 	// the background - or lighter, if the theme is so dark there is no room to go down.
@@ -1712,6 +1725,12 @@ namespace DarkTheme
 	// collapsed onto the background and every boundary in the dialog disappeared. A little stronger
 	// than the old value, since low contrast was the complaint that prompted this.
 	COLORREF CtrlBorderColor() { return Shade(FaceColor(), 22); }
+	COLORREF ButtonFaceColor(bool bDisabled, bool bPressed, bool bHot) {
+		return bDisabled ? Shade(FaceColor(), 16)
+			 : bPressed  ? Shade(FaceColor(), 14)
+			 : bHot      ? Shade(FaceColor(), 40)
+						 : Shade(FaceColor(), 28);
+	}
 	// Grid lines stay subtler than the control outlines, as the name of the game is separating rows
 	// without drawing a table.
 	COLORREF GridlineColor()   { return Shade(FaceColor(), 11); }
@@ -1781,7 +1800,7 @@ namespace DarkTheme
 		// Win11: tint the title-bar background with the same colour as the player's caption
 		// (ThemeRGB(45,50,55)), so the Options title matches the player and follows the sliders.
 		if (SysVersion::IsWin11orLater()) {
-			COLORREF cap = ThemeRGB(45, 50, 55);
+			COLORREF cap = DialogThemeRGB(45, 50, 55);
 			DwmSetWindowAttribute(hWnd, 35 /*DWMWA_CAPTION_COLOR*/, &cap, sizeof(cap));
 		}
 	}
@@ -2102,7 +2121,7 @@ namespace DarkTheme
 		}, 0);
 		// Also re-tint the title bar (Win11) so the caption follows the sliders, like the player's.
 		if (SysVersion::IsWin11orLater()) {
-			COLORREF cap = ThemeRGB(45, 50, 55);
+			COLORREF cap = DialogThemeRGB(45, 50, 55);
 			DwmSetWindowAttribute(hRoot, 35 /*DWMWA_CAPTION_COLOR*/, &cap, sizeof(cap));
 		}
 		::RedrawWindow(hRoot, nullptr, nullptr, RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN);

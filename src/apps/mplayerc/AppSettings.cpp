@@ -1293,9 +1293,9 @@ void CAppSettings::LoadSettings(bool bForce/* = false*/)
 	profile.ReadInt(IDS_R_THEME, IDS_RS_THEMEBRIGHTNESS, nThemeBrightness);
 	COLORREF themeColor;
 	if (profile.ReadHex32(IDS_R_THEME, IDS_RS_THEMECOLOR, *(unsigned*)&themeColor)) {
-		nThemeRed   = std::clamp<int>(GetRValue(themeColor), APP_THEMECHANNEL_MIN, APP_THEMECHANNEL_MAX);
-		nThemeGreen = std::clamp<int>(GetGValue(themeColor), APP_THEMECHANNEL_MIN, APP_THEMECHANNEL_MAX);
-		nThemeBlue  = std::clamp<int>(GetBValue(themeColor), APP_THEMECHANNEL_MIN, APP_THEMECHANNEL_MAX);
+		nThemeRed   = GetRValue(themeColor);
+		nThemeGreen = GetGValue(themeColor);
+		nThemeBlue  = GetBValue(themeColor);
 	}
 	profile.ReadHex32(IDS_R_THEME, IDS_RS_TOOLBARCOLORFACE, *(unsigned*)&clrFaceABGR);
 	profile.ReadHex32(IDS_R_THEME, IDS_RS_TOOLBARCOLOROUTLINE, *(unsigned*)&clrOutlineABGR);

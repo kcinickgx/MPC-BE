@@ -90,9 +90,9 @@ BOOL CPPageInterface::OnInitDialog()
 	m_chkDarkDialogs.SetCheck(s.bDarkDialogs);
 
 	m_ThemeBrightnessCtrl.SetRange	(0, 100, TRUE);
-	m_ThemeRedCtrl.SetRange			(APP_THEMECHANNEL_MIN, APP_THEMECHANNEL_MAX, TRUE);
-	m_ThemeGreenCtrl.SetRange		(APP_THEMECHANNEL_MIN, APP_THEMECHANNEL_MAX, TRUE);
-	m_ThemeBlueCtrl.SetRange		(APP_THEMECHANNEL_MIN, APP_THEMECHANNEL_MAX, TRUE);
+	m_ThemeRedCtrl.SetRange			(0, 255, TRUE);
+	m_ThemeGreenCtrl.SetRange		(0, 255, TRUE);
+	m_ThemeBlueCtrl.SetRange		(0, 255, TRUE);
 
 	// Owner-draw the theme sliders deterministically. Relying on NM_CUSTOMDRAW left the active
 	// slider's background unpainted (white) on some repaints and didn't refresh the others; the

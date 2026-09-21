@@ -21,7 +21,6 @@
 #include "stdafx.h"
 #include "EditWithButton.h"
 #include "DarkTheme.h"
-#include "../Misc.h" // ThemeRGB
 
 #define WM_EDITWITHBUTTON_RECALCNCSIZE (WM_USER + 200)
 
@@ -87,11 +86,7 @@ void CEditWithButton_Base::DrawButton(CRect rectButton)
 		const bool disabled = (st == PBS_DISABLED);
 		const bool pressed  = (st == PBS_PRESSED);
 		const bool hot      = (st == PBS_HOT);
-		const COLORREF face = disabled ? ThemeRGB(38, 43, 48)
-							: pressed  ? ThemeRGB(36, 41, 46)
-							: hot      ? ThemeRGB(62, 69, 76)
-									   : ThemeRGB(50, 56, 62);
-		dc.FillSolidRect(rectButton, face);
+		dc.FillSolidRect(rectButton, DarkTheme::ButtonFaceColor(disabled, pressed, hot));
 		CBrush brBorder(DarkTheme::CtrlBorderColor());
 		dc.FrameRect(rectButton, &brBorder);
 		if (pressed) {

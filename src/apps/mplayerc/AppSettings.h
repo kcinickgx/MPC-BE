@@ -93,12 +93,6 @@ constexpr auto CLSW_UNRECOGNIZEDSWITCH = (CLSW_DEVICE << 1);
 #define APP_WEBSRVQUALITY_DEF	85
 #define APP_WEBSRVQUALITY_MAX	100
 
-// Floor for the theme colour channels (R/G/B). Every themed colour is the channel value multiplied in,
-// so at 0 the whole player - menu, toolbar, seek bar - collapses to pure black with no separation left
-// between anything. 0 was never a usable setting; it just was not prevented.
-#define APP_THEMECHANNEL_MIN	50
-#define APP_THEMECHANNEL_MAX	255
-
 #define APP_AUDIOTIMESHIFT_MIN	(-10*60*1000) // -10 munutes
 #define APP_AUDIOTIMESHIFT_MAX	(10*60*1000)  // +10 munutes
 
